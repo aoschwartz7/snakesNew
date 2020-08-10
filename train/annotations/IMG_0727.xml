@@ -1,0 +1,26 @@
+<annotation>
+	<folder>images</folder>
+	<filename>IMG_0727.JPG</filename>
+	<path>/Users/alecschwartz/Desktop/workspace/snakes/images/IMG_0727.JPG</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>2048</width>
+		<height>1536</height>
+		<depth>3</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>snake</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>817</xmin>
+			<ymin>922</ymin>
+			<xmax>1044</xmax>
+			<ymax>1049</ymax>
+		</bndbox>
+	</object>
+</annotation>
