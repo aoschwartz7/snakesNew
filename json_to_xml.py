@@ -1,6 +1,9 @@
+import json
+import pandas as pd
+from tabulate import tabulate
 import xml.etree.ElementTree as gfg
 from fuzzywuzzy import process
-import json
+
 
 # Create list of object types found in dataset
 object_types = ["snake", "snakeHead", "snakeRattle"]
@@ -18,9 +21,23 @@ def extract_json(json_file):
 
     with open(json_file) as file:
         data = json.load(file)
+
+        # Create empty DataFrame
+        columns = ["Project Name", "Dataset Name", "Image URL", "Image",
+                   "Whole Snakes", "Snake Heads", "Snake Rattles"]
+        dfWhole = pd.DataFrame(columns=columns)
+
         for image in data:
+
+            # Project Name
+            project_name = image["Project Name"]
+            # Get Dataset Name
+            dataset_name = image["Dataset Name"]
+            # Get image URL
+            image_url = image["Labeled Data"]
             # Get JPG title
-            jpg_title = image["External ID"]
+            image_title = image["External ID"]
+
             # Check if image does not contain any images
             if "objects" not in image["Label"]:
                 continue
@@ -30,26 +47,56 @@ def extract_json(json_file):
 
             # Get object type and box coordinates
             object_list = []
+            # When we loop through objects per label, keep track of total snakes,
+            # snake heads, snake rattles so we can append to DataFrame later
+            snakes = 0
+            heads = 0
+            rattles = 0
 
             for i in range(num_objects):
                 object_type = image["Label"]["objects"][i]["title"]
-                # print(object_type)
                 # Verify object type
                 object_type = process.extract(object_type, object_types, limit=1)
                 object_type = object_type[0][0]
+                ["snake", "snakeHead", "snakeRattle"]
+                if object_type == "snake":
+                    snakes += 1
+                if object_type == "snakeHead":
+                    heads += 1
+                if object_type == "snakeRattle":
+                    rattles += 1
+
                 coordinates = calculate_dimensions(image, i)
                 object_list.append({object_type:coordinates})
 
+
+
+            dfWhole = dfWhole.append({'Project Name': project_name,
+                                      'Dataset Name': dataset_name,
+                                      'Image URL': image_url,
+                                      'Image': image_title,
+                                      'Whole Snakes': snakes,
+                                      'Snake Heads': heads,
+                                      'Snake Rattles': rattles
+                                      },
+                                      ignore_index=True)
+
+
             # for debugging
-            for objects in object_list:
-                    for object in objects:
-                        object_name = object
-                        coordinates = objects[object]
-                        print(jpg_title, object_name, coordinates)
+            # for objects in object_list:
+            #         for object in objects:
+            #             object_name = object
+            #             coordinates = objects[object]
+            #             print(image_title, object_name, coordinates)
 
             # Create XML file formatted for YOLOv3 model training data
-            create_xml(jpg_title, object_list)
+            # create_xml(image_title, object_list)
             print(" ")
+        dfWhole = dfWhole.sort_values(by=['Image'])
+        dfWhole = dfWhole.reset_index(drop=True)
+        # TODO: pass in project name for naming csv
+        dfWhole.to_csv('project_name_summary.csv')
+
 
 # # Calculate box label dimensions
 def calculate_dimensions(image, i):
@@ -76,7 +123,7 @@ def calculate_dimensions(image, i):
     return xmin, ymin, xmax, ymax
 
 # Create XML container for JPG title and structure
-def create_xml(jpg_title, object_list):
+def create_xml(image_title, object_list):
     root = gfg.Element("annotation")
 
     folder = gfg.Element("folder")
@@ -84,11 +131,11 @@ def create_xml(jpg_title, object_list):
     root.append(folder)
 
     filename = gfg.Element("filename")
-    filename.text = jpg_title
+    filename.text = image_title
     root.append(filename)
 
     path = gfg.Element("path")
-    path.text = "/Users/alecschwartz/Desktop/workspace/snakes/images/" + jpg_title
+    path.text = "/Users/alecschwartz/Desktop/workspace/snakes/images/" + image_title
     root.append(path)
 
     source = gfg.Element("source")
@@ -144,10 +191,15 @@ def create_xml(jpg_title, object_list):
 
 
     tree = gfg.ElementTree(root)
-    # Remove .JPG from jpg_title
-    jpg_title = jpg_title[:-4]
-    with open ("annotations_test/" + jpg_title + ".xml", "wb") as files:
+    # Remove .JPG from image_title
+    image_title = image_title[:-4]
+    with open ("annotations_test/" + image_title + ".xml", "wb") as files:
         tree.write(files)
+
+
+
+# def create_dataframe(project_name, dataset_name, image_url, image_title, objects):
+#
 
 
 if __name__ == '__main__':
